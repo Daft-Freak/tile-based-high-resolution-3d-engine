@@ -889,9 +889,9 @@ void blit_fast_code(Render3D::fill_triangle)(VertexOutData *data, blit::Point ti
 
 void Render3D::wireframe_triangle(VertexOutData *data, blit::Point tile_pos)
 {
-    IntVec3 p0{int32_t(data[0].x) - tile_pos.x, int32_t(data[0].y) - tile_pos.y, int32_t(UFixed32<>(data[0].z))};
-    IntVec3 p1{int32_t(data[1].x) - tile_pos.x, int32_t(data[1].y) - tile_pos.y, int32_t(UFixed32<>(data[1].z))};
-    IntVec3 p2{int32_t(data[2].x) - tile_pos.x, int32_t(data[2].y) - tile_pos.y, int32_t(UFixed32<>(data[2].z))};
+    IntVec3 p0{data[0].x.raw() - tile_pos.x, data[0].y.raw() - tile_pos.y, int32_t(UFixed32<>(data[0].z))};
+    IntVec3 p1{data[1].x.raw() - tile_pos.x, data[1].y.raw() - tile_pos.y, int32_t(UFixed32<>(data[1].z))};
+    IntVec3 p2{data[2].x.raw() - tile_pos.x, data[2].y.raw() - tile_pos.y, int32_t(UFixed32<>(data[2].z))};
 
     // check if outside tile
     auto get_outside_sides = [&](IntVec3 &p)
