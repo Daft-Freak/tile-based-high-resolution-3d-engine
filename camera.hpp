@@ -44,6 +44,29 @@ public:
         return mat;
     }
 
+    static blit::Mat4 orthographic_matrix(float left, float right, float bottom, float top, float near, float far)
+    {
+        auto mat = blit::Mat4::identity();
+
+        mat.v00 = 2.0f / (right - left);
+
+        mat.v11 = 2.0f / (top - bottom);
+
+        mat.v22 = -2.0f / (far - near);
+
+        mat.v03 = -((right + left) / (right - left));
+        mat.v13 = -((top + bottom) / (top - bottom));
+        mat.v23 = -((far + near) / (far - near));
+
+        return mat;
+    }
+
+    static blit::Mat4 orthographic_matrix(int width, int height, float near, float far)
+    {
+        // 0,0 -> w,h
+        return orthographic_matrix(0.0f, width, 0.0f, height, near, far);
+    }
+
     static blit::Mat4 perspective_matrix(float near, float far, float fov, float aspect)
     {
         auto tan_fov = std::tan(fov);
