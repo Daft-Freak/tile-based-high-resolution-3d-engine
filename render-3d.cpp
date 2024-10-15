@@ -601,8 +601,12 @@ bool Render3D::clip_triangle(VertexOutData *verts, Fixed32<> bound, int verts_ou
     // (bound is +/-1 used to flip for far/near plane)
     Fixed32<20> bf, cf;
 
-    bf = Fixed32<20>(a->w - a->z * bound) / Fixed32<20>((a->w - a->z * bound) - (b->w - b->z * bound));
-    cf = Fixed32<20>(a->w - a->z * bound) / Fixed32<20>((a->w - a->z * bound) - (c->w - c->z * bound));
+    auto a_wz = a->w - a->z * bound;
+    auto b_wz = b->w - b->z * bound;
+    auto c_wz = c->w - c->z * bound;
+
+    bf = Fixed32<20>(a_wz) / Fixed32<20>(a_wz - b_wz);
+    cf = Fixed32<20>(a_wz) / Fixed32<20>(a_wz - c_wz);
 
     int b_index = b - verts;
     int c_index = c - verts;
