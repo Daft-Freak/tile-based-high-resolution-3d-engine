@@ -16,6 +16,15 @@
 #define THR3E_TILE_HEIGHT 80
 #endif
 
+// skip tile buffer for colour buffer, must be 0 for PicoVision
+#ifndef THR3E_COLOUR_DIRECT
+#ifdef BLIT_BOARD_PIMORONI_PICOVISION
+#define THR3E_COLOUR_DIRECT 0
+#else
+#define THR3E_COLOUR_DIRECT 1
+#endif
+#endif
+
 #ifdef PICO_BUILD
 // default to fast
 #ifndef THR3E_PICO_INTERP

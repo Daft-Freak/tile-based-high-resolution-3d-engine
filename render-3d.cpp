@@ -51,7 +51,10 @@ struct IntVec3
 
 
 #if THR3E_PICO_MULTICORE
+
+#if !THR3E_COLOUR_DIRECT
 auto_init_mutex(blit_mutex);
+#endif
 
 enum class Core1Job
 {
@@ -103,7 +106,11 @@ void fixed32_mvp_pos_shader(const uint8_t *in, Render3D::VertexOutData *out, con
     out->w = (pos[0] * mat.v30) + (pos[1] * mat.v31) + (pos[2] * mat.v32) + mat.v33;
 }
 
+#if THR3E_COLOUR_DIRECT
+Render3D::Render3D()
+#else
 Render3D::Render3D() : tile_surf(reinterpret_cast<uint8_t *>(tile_colour_buffer), PixelFormat::BGR555, {tile_width, tile_height})
+#endif
 {
     for(int i = 0; i < max_textures; i++)
         textures[i] = nullptr;
@@ -444,9 +451,17 @@ void Render3D::rasterise()
     uint32_t clear_col32 = clear_colour | clear_colour << 16;
     uint32_t clear_depth32 = 0xFFFFFFFF;
 
-    auto col_buf = get_colour_buffer();
+    auto col_buf = get_colour_buffer({0, 0});
     auto depth_buf = get_depth_buffer();
-    const auto tile_buf_size = sizeof(tile_colour_buffer) / num_tile_bufs;
+    const auto tile_buf_size = sizeof(tile_depth_buffer) / num_tile_bufs;
+
+#if THR3E_COLOUR_DIRECT
+    // colour clear if direct (entire fb)
+    size_t screen_area = screen.bounds.area();
+    auto screen_ptr32 = reinterpret_cast<uint32_t *>(col_buf);
+    for(size_t i = 0; i < screen_area / 2; i++)
+        *screen_ptr32++ = clear_col32;
+#endif
 
 #if THR3E_PICO_MULTICORE
     // offset for per-core tile buffers
@@ -474,8 +489,10 @@ void Render3D::rasterise()
             // clear
             // TODO: load/store for multi-pass? (UNLIMITED PO... triangles)
             auto tile_ptr32 = reinterpret_cast<uint32_t *>(col_buf);
+#if !THR3E_COLOUR_DIRECT
             for(size_t i = 0; i < tile_buf_size / 4; i++)
                 *tile_ptr32++ = clear_col32;
+#endif
 
             tile_ptr32 = reinterpret_cast<uint32_t *>(depth_buf);
             for(size_t i = 0; i < tile_buf_size / 4; i++)
@@ -486,6 +503,7 @@ void Render3D::rasterise()
                 (this->*do_triangle)(ptr, {x, y});
 
             // store colour tile
+#if !THR3E_COLOUR_DIRECT
             if(screen.format == PixelFormat::BGR555)
             {
                 // assume picovision, which has a 555 -> 555 blit
@@ -507,6 +525,7 @@ void Render3D::rasterise()
                 for(int ty = 0; ty < tile_height; ty++)
                     memcpy(screen.ptr(x, y + ty), col_buf + ty * tile_width, tile_width * 2);
             }
+#endif
         }
     }
 
@@ -755,7 +774,7 @@ void blit_fast_code(Render3D::fill_triangle)(VertexOutData *data, blit::Point ti
     auto y_step1 = Fixed32<>(1) / p2M0.y;
     Fixed32<> y_frac1 = 0;
 
-    auto col_buf = get_colour_buffer();
+    auto col_buf = get_colour_buffer(tile_pos);
     auto depth_buf = get_depth_buffer();
 
     if(p1M0.y && p1.y > 0)
@@ -929,7 +948,7 @@ void Render3D::wireframe_triangle(VertexOutData *data, blit::Point tile_pos)
         {data[2].r, data[2].g, data[2].b}
     };
 
-    auto col_buf = get_colour_buffer();
+    auto col_buf = get_colour_buffer(tile_pos);
     auto depth_buf = get_depth_buffer();
 
     // no texture handling, could be done but not sure how much use it would be...
@@ -1169,8 +1188,12 @@ uint16_t Render3D::pack_colour(Pen p)
 #endif
 }
 
-uint16_t *Render3D::get_colour_buffer()
+uint16_t *Render3D::get_colour_buffer(blit::Point tile_pos)
 {
+#if THR3E_COLOUR_DIRECT
+    return reinterpret_cast<uint16_t *>(blit::screen.ptr(tile_pos));
+#else
+    // not direct/through tile buffer
     auto ptr = tile_colour_buffer;
 
 #if THR3E_PICO_MULTICORE
@@ -1178,6 +1201,7 @@ uint16_t *Render3D::get_colour_buffer()
 #endif
 
     return ptr;
+#endif
 }
 
 uint16_t *Render3D::get_depth_buffer()
@@ -1193,7 +1217,11 @@ uint16_t *Render3D::get_depth_buffer()
 
 int Render3D::get_colour_stride() const
 {
+#if THR3E_COLOUR_DIRECT
+    return screen.bounds.w;
+#else
     return tile_width;
+#endif
 }
 
 int Render3D::get_depth_stride() const

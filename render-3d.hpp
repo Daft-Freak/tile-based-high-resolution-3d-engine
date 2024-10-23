@@ -69,7 +69,7 @@ protected:
 
     uint16_t pack_colour(blit::Pen p);
 
-    uint16_t *get_colour_buffer();
+    uint16_t *get_colour_buffer(blit::Point tile_pos);
     uint16_t *get_depth_buffer();
 
     int get_colour_stride() const;
@@ -97,11 +97,13 @@ protected:
 #else
     static constexpr int num_tile_bufs = 1;
 #endif
-    uint16_t tile_colour_buffer[tile_width * tile_height * num_tile_bufs];
-    uint16_t tile_depth_buffer[tile_width * tile_height * num_tile_bufs];
 
+#if !THR3E_COLOUR_DIRECT
     // used for picovision blit
     blit::Surface tile_surf;
+    uint16_t tile_colour_buffer[tile_width * tile_height * num_tile_bufs];
+#endif
+    uint16_t tile_depth_buffer[tile_width * tile_height * num_tile_bufs];
 };
 
 // 16.16 fixed point positions, multiply by mvp
