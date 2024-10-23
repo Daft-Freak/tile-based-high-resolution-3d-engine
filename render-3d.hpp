@@ -68,7 +68,6 @@ protected:
     void gradient_line(blit::Point p1, blit::Point p2, uint16_t z1, uint16_t z2, blit::Pen col1, blit::Pen col2);
 
     uint16_t pack_colour(blit::Pen p);
-    blit::Pen unpack_colour(uint16_t c);
 
     FixedMat4<> model_view, projection;
     FixedMat4<> mvp;

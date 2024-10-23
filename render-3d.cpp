@@ -1185,19 +1185,3 @@ uint16_t Render3D::pack_colour(Pen p)
     return (p.r >> 3) | ((p.g >> 2) << 5) | ((p.b >> 3) << 11);
 #endif
 }
-
-blit::Pen Render3D::unpack_colour(uint16_t c)
-{
-    // not used for picovision
-
-    // 565
-    uint8_t r = c & 0x1F;
-    uint8_t g = (c >> 5) & 0x3F;
-    uint8_t b = c >> 11;
-
-    r = r << 3 | r >> 2;
-    g = g << 2 | g >> 4;
-    b = b << 3 | b >> 2;
-
-    return {r, g, b};
-}
