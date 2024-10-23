@@ -69,6 +69,12 @@ protected:
 
     uint16_t pack_colour(blit::Pen p);
 
+    uint16_t *get_colour_buffer(int x = 0, int y = 0);
+    uint16_t *get_depth_buffer(int x = 0, int y = 0);
+
+    int get_colour_stride() const;
+    int get_depth_stride() const;
+
     FixedMat4<> model_view, projection;
     FixedMat4<> mvp;
 

@@ -444,14 +444,12 @@ void Render3D::rasterise()
     uint32_t clear_col32 = clear_colour | clear_colour << 16;
     uint32_t clear_depth32 = 0xFFFFFFFF;
 
-    auto col_buf = tile_colour_buffer;
-    auto depth_buf = tile_depth_buffer;
+    auto col_buf = get_colour_buffer();
+    auto depth_buf = get_depth_buffer();
     const auto tile_buf_size = sizeof(tile_colour_buffer) / num_tile_bufs;
 
 #if THR3E_PICO_MULTICORE
     // offset for per-core tile buffers
-    col_buf += core_num * tile_width * tile_height;
-    depth_buf += core_num * tile_width * tile_height;
     bool offset_row = core_num == 1;
 #endif
 
@@ -978,14 +976,8 @@ void blit_fast_code(Render3D::gradient_h_line)(int x1, int x2, uint16_t z1, uint
         x1 = 0;
     }
 
-    auto col_ptr = tile_colour_buffer + x1 + y * tile_width;
-    auto depth_ptr = tile_depth_buffer + x1 + y * tile_width;
-
-#if THR3E_PICO_MULTICORE
-    auto core_num = get_core_num();
-    col_ptr += core_num * tile_width * tile_height;
-    depth_ptr += core_num * tile_width * tile_height;
-#endif
+    auto col_ptr = get_colour_buffer(x1, y);
+    auto depth_ptr = get_depth_buffer(x1, y);
 
     auto end_ptr = col_ptr + (x2 - x1);
 
@@ -1056,14 +1048,8 @@ void blit_fast_code(Render3D::textured_h_line)(int x1, int x2, uint16_t z1, uint
         x1 = 0;
     }
 
-    auto col_ptr = tile_colour_buffer + x1 + y * tile_width;
-    auto depth_ptr = tile_depth_buffer + x1 + y * tile_width;
-
-#if THR3E_PICO_MULTICORE
-    auto core_num = get_core_num();
-    col_ptr += core_num * tile_width * tile_height;
-    depth_ptr += core_num * tile_width * tile_height;
-#endif
+    auto col_ptr = get_colour_buffer(x1, y);
+    auto depth_ptr = get_depth_buffer(x1, y);
 
     auto end_ptr = col_ptr + (x2 - x1);
 
@@ -1139,24 +1125,18 @@ void Render3D::gradient_line(Point p1, Point p2, uint16_t z1, uint16_t z2, Pen c
     auto g = Fixed32<>(col1.g);
     auto b = Fixed32<>(col1.b);
 
-    auto col_ptr = tile_colour_buffer;
-    auto depth_ptr = tile_depth_buffer;
-
-#if THR3E_PICO_MULTICORE
-    auto core_num = get_core_num();
-    col_ptr += core_num * tile_width * tile_height;
-    depth_ptr += core_num * tile_width * tile_height;
-#endif
+    auto col_ptr = get_colour_buffer();
+    auto depth_ptr = get_depth_buffer();
 
     while(true)
     {
         if(p.x >= 0 && p.y >= 0 && p.x < tile_width && p.y < tile_height)
         {
             // depth test
-            if(int32_t(z) <= depth_ptr[p.x + p.y * tile_width])
+            if(int32_t(z) <= depth_ptr[p.x + p.y * get_depth_stride()])
             {
-                depth_ptr[p.x + p.y * tile_width] = int32_t(z);
-                col_ptr[p.x + p.y * tile_width] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
+                depth_ptr[p.x + p.y * get_depth_stride()] = int32_t(z);
+                col_ptr[p.x + p.y * get_colour_stride()] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
             }
         }
 
@@ -1184,4 +1164,36 @@ uint16_t Render3D::pack_colour(Pen p)
     // 565
     return (p.r >> 3) | ((p.g >> 2) << 5) | ((p.b >> 3) << 11);
 #endif
+}
+
+uint16_t *Render3D::get_colour_buffer(int x, int y)
+{
+    auto ptr = tile_colour_buffer + x + y * tile_width;
+
+#if THR3E_PICO_MULTICORE
+    ptr += get_core_num() * tile_width * tile_height;
+#endif
+
+    return ptr;
+}
+
+uint16_t *Render3D::get_depth_buffer(int x, int y )
+{
+    auto ptr = tile_depth_buffer + x + y * tile_width;
+
+#if THR3E_PICO_MULTICORE
+    ptr += get_core_num() * tile_width * tile_height;
+#endif
+
+    return ptr;
+}
+
+int Render3D::get_colour_stride() const
+{
+    return tile_width;
+}
+
+int Render3D::get_depth_stride() const
+{
+    return tile_width;
 }
