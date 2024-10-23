@@ -62,15 +62,15 @@ protected:
     void fill_triangle(VertexOutData *data, blit::Point tile_pos);
     void wireframe_triangle(VertexOutData *data, blit::Point tile_pos);
 
-    void gradient_h_line(int x1, int x2, uint16_t z1, uint16_t z2, int y, blit::Pen col1, blit::Pen col2);
-    void textured_h_line(int x1, int x2, uint16_t z1, uint16_t z2, int y, blit::Pen col1, blit::Pen col2, blit::Surface *tex, Fixed16<12> u1, Fixed16<12> u2, Fixed16<12> v1, Fixed16<12> v2);
+    void gradient_h_line(uint16_t *col_buf, uint16_t *depth_buf, int x1, int x2, uint16_t z1, uint16_t z2, int y, blit::Pen col1, blit::Pen col2);
+    void textured_h_line(uint16_t *col_buf, uint16_t *depth_buf, int x1, int x2, uint16_t z1, uint16_t z2, int y, blit::Pen col1, blit::Pen col2, blit::Surface *tex, Fixed16<12> u1, Fixed16<12> u2, Fixed16<12> v1, Fixed16<12> v2);
 
-    void gradient_line(blit::Point p1, blit::Point p2, uint16_t z1, uint16_t z2, blit::Pen col1, blit::Pen col2);
+    void gradient_line(uint16_t *col_buf, uint16_t *depth_buf, blit::Point p1, blit::Point p2, uint16_t z1, uint16_t z2, blit::Pen col1, blit::Pen col2);
 
     uint16_t pack_colour(blit::Pen p);
 
-    uint16_t *get_colour_buffer(int x = 0, int y = 0);
-    uint16_t *get_depth_buffer(int x = 0, int y = 0);
+    uint16_t *get_colour_buffer();
+    uint16_t *get_depth_buffer();
 
     int get_colour_stride() const;
     int get_depth_stride() const;

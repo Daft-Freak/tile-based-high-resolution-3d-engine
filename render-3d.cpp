@@ -755,6 +755,9 @@ void blit_fast_code(Render3D::fill_triangle)(VertexOutData *data, blit::Point ti
     auto y_step1 = Fixed32<>(1) / p2M0.y;
     Fixed32<> y_frac1 = 0;
 
+    auto col_buf = get_colour_buffer();
+    auto depth_buf = get_depth_buffer();
+
     if(p1M0.y && p1.y > 0)
     {
         auto col1M0 = cols[1] - cols[0];
@@ -810,10 +813,10 @@ void blit_fast_code(Render3D::fill_triangle)(VertexOutData *data, blit::Point ti
                 auto start_v = v[0] + (v[2] - v[0]) * y_frac1;
                 auto end_u = u[0] + (u[1] - u[0]) * y_frac2;
                 auto end_v = v[0] + (v[1] - v[0]) * y_frac2;
-                textured_h_line(int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col, tex, start_u, end_u, start_v, end_v);
+                textured_h_line(col_buf, depth_buf, int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col, tex, start_u, end_u, start_v, end_v);
             }
             else
-                gradient_h_line(int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col);
+                gradient_h_line(col_buf, depth_buf, int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col);
         }
 
 #if THR3E_PICO_INTERP
@@ -881,10 +884,10 @@ void blit_fast_code(Render3D::fill_triangle)(VertexOutData *data, blit::Point ti
                 auto start_v = v[0] + (v[2] - v[0]) * y_frac1;
                 auto end_u = u[1] + (u[2] - u[1]) * y_frac2;
                 auto end_v = v[1] + (v[2] - v[1]) * y_frac2;
-                textured_h_line(int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col, tex, start_u, end_u, start_v, end_v);
+                textured_h_line(col_buf, depth_buf, int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col, tex, start_u, end_u, start_v, end_v);
             }
             else
-                gradient_h_line(int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col);
+                gradient_h_line(col_buf, depth_buf, int32_t(start_x), int32_t(end_x), start_z, end_z, y, start_col, end_col);
         }
     }
 }
@@ -926,13 +929,16 @@ void Render3D::wireframe_triangle(VertexOutData *data, blit::Point tile_pos)
         {data[2].r, data[2].g, data[2].b}
     };
 
+    auto col_buf = get_colour_buffer();
+    auto depth_buf = get_depth_buffer();
+
     // no texture handling, could be done but not sure how much use it would be...
-    gradient_line({p0.x, p0.y}, {p1.x, p1.y}, p0.z, p1.z, cols[0], cols[1]);
-    gradient_line({p1.x, p1.y}, {p2.x, p2.y}, p1.z, p2.z, cols[1], cols[2]);
-    gradient_line({p2.x, p2.y}, {p0.x, p0.y}, p2.z, p0.z, cols[2], cols[0]);
+    gradient_line(col_buf, depth_buf, {p0.x, p0.y}, {p1.x, p1.y}, p0.z, p1.z, cols[0], cols[1]);
+    gradient_line(col_buf, depth_buf, {p1.x, p1.y}, {p2.x, p2.y}, p1.z, p2.z, cols[1], cols[2]);
+    gradient_line(col_buf, depth_buf, {p2.x, p2.y}, {p0.x, p0.y}, p2.z, p0.z, cols[2], cols[0]);
 }
 
-void blit_fast_code(Render3D::gradient_h_line)(int x1, int x2, uint16_t z1, uint16_t z2, int y, Pen col1, Pen col2)
+void blit_fast_code(Render3D::gradient_h_line)(uint16_t *col_buf, uint16_t *depth_buf, int x1, int x2, uint16_t z1, uint16_t z2, int y, Pen col1, Pen col2)
 {
     if(x1 > x2)
     {
@@ -976,8 +982,8 @@ void blit_fast_code(Render3D::gradient_h_line)(int x1, int x2, uint16_t z1, uint
         x1 = 0;
     }
 
-    auto col_ptr = get_colour_buffer(x1, y);
-    auto depth_ptr = get_depth_buffer(x1, y);
+    auto col_ptr = col_buf + x1 + y * get_colour_stride();
+    auto depth_ptr = depth_buf + x1 + y * get_depth_stride();
 
     auto end_ptr = col_ptr + (x2 - x1);
 
@@ -994,7 +1000,7 @@ void blit_fast_code(Render3D::gradient_h_line)(int x1, int x2, uint16_t z1, uint
 }
 
 // the above, but with texture mapping
-void blit_fast_code(Render3D::textured_h_line)(int x1, int x2, uint16_t z1, uint16_t z2, int y, Pen col1, Pen col2, Surface *tex, Fixed16<12> u1, Fixed16<12> u2, Fixed16<12> v1, Fixed16<12> v2)
+void blit_fast_code(Render3D::textured_h_line)(uint16_t *col_buf, uint16_t *depth_buf, int x1, int x2, uint16_t z1, uint16_t z2, int y, Pen col1, Pen col2, Surface *tex, Fixed16<12> u1, Fixed16<12> u2, Fixed16<12> v1, Fixed16<12> v2)
 {
     if(x1 > x2)
     {
@@ -1048,8 +1054,8 @@ void blit_fast_code(Render3D::textured_h_line)(int x1, int x2, uint16_t z1, uint
         x1 = 0;
     }
 
-    auto col_ptr = get_colour_buffer(x1, y);
-    auto depth_ptr = get_depth_buffer(x1, y);
+    auto col_ptr = col_buf + x1 + y * get_colour_stride();
+    auto depth_ptr = depth_buf + x1 + y * get_depth_stride();
 
     auto end_ptr = col_ptr + (x2 - x1);
 
@@ -1091,7 +1097,7 @@ void blit_fast_code(Render3D::textured_h_line)(int x1, int x2, uint16_t z1, uint
 }
 
 // used for wireframe
-void Render3D::gradient_line(Point p1, Point p2, uint16_t z1, uint16_t z2, Pen col1, Pen col2)
+void Render3D::gradient_line(uint16_t *col_buf, uint16_t *depth_buf, Point p1, Point p2, uint16_t z1, uint16_t z2, Pen col1, Pen col2)
 {
     if(p1 == p2)
         return;
@@ -1125,18 +1131,15 @@ void Render3D::gradient_line(Point p1, Point p2, uint16_t z1, uint16_t z2, Pen c
     auto g = Fixed32<>(col1.g);
     auto b = Fixed32<>(col1.b);
 
-    auto col_ptr = get_colour_buffer();
-    auto depth_ptr = get_depth_buffer();
-
     while(true)
     {
         if(p.x >= 0 && p.y >= 0 && p.x < tile_width && p.y < tile_height)
         {
             // depth test
-            if(int32_t(z) <= depth_ptr[p.x + p.y * get_depth_stride()])
+            if(int32_t(z) <= depth_buf[p.x + p.y * get_depth_stride()])
             {
-                depth_ptr[p.x + p.y * get_depth_stride()] = int32_t(z);
-                col_ptr[p.x + p.y * get_colour_stride()] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
+                depth_buf[p.x + p.y * get_depth_stride()] = int32_t(z);
+                col_buf[p.x + p.y * get_colour_stride()] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
             }
         }
 
@@ -1166,9 +1169,9 @@ uint16_t Render3D::pack_colour(Pen p)
 #endif
 }
 
-uint16_t *Render3D::get_colour_buffer(int x, int y)
+uint16_t *Render3D::get_colour_buffer()
 {
-    auto ptr = tile_colour_buffer + x + y * tile_width;
+    auto ptr = tile_colour_buffer;
 
 #if THR3E_PICO_MULTICORE
     ptr += get_core_num() * tile_width * tile_height;
@@ -1177,9 +1180,9 @@ uint16_t *Render3D::get_colour_buffer(int x, int y)
     return ptr;
 }
 
-uint16_t *Render3D::get_depth_buffer(int x, int y )
+uint16_t *Render3D::get_depth_buffer()
 {
-    auto ptr = tile_depth_buffer + x + y * tile_width;
+    auto ptr = tile_depth_buffer;
 
 #if THR3E_PICO_MULTICORE
     ptr += get_core_num() * tile_width * tile_height;
