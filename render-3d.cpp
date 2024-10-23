@@ -1139,15 +1139,24 @@ void Render3D::gradient_line(Point p1, Point p2, uint16_t z1, uint16_t z2, Pen c
     auto g = Fixed32<>(col1.g);
     auto b = Fixed32<>(col1.b);
 
+    auto col_ptr = tile_colour_buffer;
+    auto depth_ptr = tile_depth_buffer;
+
+#if THR3E_PICO_MULTICORE
+    auto core_num = get_core_num();
+    col_ptr += core_num * tile_width * tile_height;
+    depth_ptr += core_num * tile_width * tile_height;
+#endif
+
     while(true)
     {
         if(p.x >= 0 && p.y >= 0 && p.x < tile_width && p.y < tile_height)
         {
             // depth test
-            if(int32_t(z) <= tile_depth_buffer[p.x + p.y * tile_width])
+            if(int32_t(z) <= depth_ptr[p.x + p.y * tile_width])
             {
-                tile_depth_buffer[p.x + p.y * tile_width] = int32_t(z);
-                tile_colour_buffer[p.x + p.y * tile_width] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
+                depth_ptr[p.x + p.y * tile_width] = int32_t(z);
+                col_ptr[p.x + p.y * tile_width] = pack_colour({uint8_t(r), uint8_t(g), uint8_t(b)});
             }
         }
 
