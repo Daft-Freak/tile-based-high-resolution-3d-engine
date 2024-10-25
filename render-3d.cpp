@@ -203,13 +203,13 @@ void Render3D::draw(int count, const uint8_t *ptr)
 
         bool clipped = near_out || far_out;
 
-        // calculate the rest of the attributes
-        for(int j = 0; j < 3; j++)
-            vertex_shader(ptr + (i + j) * vertex_stride, trans + j, *this);
-
         // apply clipping to attributes now that we have them
         if(clipped)
         {
+            // TODO: restructure this a bit to avoid vertex shader?
+            for(int j = 0; j < 3; j++)
+                vertex_shader(ptr + (i + j) * vertex_stride, trans + j, *this);
+
             VertexOutData temp[3];
             // blend ALL the attributes
             for(int j = 0; j < 3; j++)
@@ -219,6 +219,8 @@ void Render3D::draw(int count, const uint8_t *ptr)
                 temp[j].z = trans[0].z * clipped_factors[j * 3 + 0] + trans[1].z * clipped_factors[j * 3 + 1] + trans[2].z * clipped_factors[j * 3 + 2];
                 temp[j].w = trans[0].w * clipped_factors[j * 3 + 0] + trans[1].w * clipped_factors[j * 3 + 1] + trans[2].w * clipped_factors[j * 3 + 2];
 
+                // trans, cull, vertex shader, attribs
+
                 temp[j].r = uint8_t(Fixed32<>(trans[0].r) * clipped_factors[j * 3 + 0] + Fixed32<>(trans[1].r) * clipped_factors[j * 3 + 1] + Fixed32<>(trans[2].r) * clipped_factors[j * 3 + 2]);
                 temp[j].g = uint8_t(Fixed32<>(trans[0].g) * clipped_factors[j * 3 + 0] + Fixed32<>(trans[1].g) * clipped_factors[j * 3 + 1] + Fixed32<>(trans[2].g) * clipped_factors[j * 3 + 2]);
                 temp[j].b = uint8_t(Fixed32<>(trans[0].b) * clipped_factors[j * 3 + 0] + Fixed32<>(trans[1].b) * clipped_factors[j * 3 + 1] + Fixed32<>(trans[2].b) * clipped_factors[j * 3 + 2]);
@@ -227,12 +229,16 @@ void Render3D::draw(int count, const uint8_t *ptr)
 
                 temp[j].u = Fixed16<12>(clipped_factors[j * 3 + 0] * trans[0].u + clipped_factors[j * 3 + 1] * trans[1].u + clipped_factors[j * 3 + 2] * trans[2].u);
                 temp[j].v = Fixed16<12>(clipped_factors[j * 3 + 0] * trans[0].v + clipped_factors[j * 3 + 1] * trans[1].v + clipped_factors[j * 3 + 2] * trans[2].v);
+            
+                transform_vertex(temp[j]);
             }
+
+            bool culled_tri1 = cull_triangle(temp);
 
             // second tri
             if(add_triangle)
             {
-                auto trans2 = trans + stride;
+                auto trans2 = culled_tri1 ? temp : trans + stride;
                 auto factors = clipped_factors + 3 * 3;
                 for(int j = 0; j < 3; j++)
                 {
@@ -257,30 +263,33 @@ void Render3D::draw(int count, const uint8_t *ptr)
                 add_triangle = !cull_triangle(trans2);
             }
 
+            // both culled, do nothing
+            if(culled_tri1 && !add_triangle)
+                continue;
+
+            // at least one non-culled triangle, copy to final output
             memcpy(trans, temp, sizeof(VertexOutData) * 3);
-        }
 
-        // w divide and viewport transform
-        for(int j = 0; j < 3; j++)
-            transform_vertex(trans[j]);
-
-        // cull back faces and empty
-        if(cull_triangle(trans))
-        {
-            if(add_triangle)
-            {
-                // we still need to keep the second triangle though
-                // this might happen due to precision issues causing the first triangle to get culled
-                memcpy(trans, trans + stride, sizeof(VertexOutData) * 3);
+            // adjust ptr if two tris
+            if(add_triangle && !culled_tri1)
                 trans += stride;
-            }
-            continue;
+        }
+        else
+        {
+            // w divide and viewport transform
+            for(int j = 0; j < 3; j++)
+                transform_vertex(trans[j]);
+            
+            // cull back faces and empty
+            if(cull_triangle(trans))
+                continue;
+
+            // calculate the rest of the attributes
+            for(int j = 0; j < 3; j++)
+                vertex_shader(ptr + (i + j) * vertex_stride, trans + j, *this);
         }
 
         trans += stride;
-
-        if(add_triangle)
-            trans += stride;
     }
 
 #if THR3E_PICO_MULTICORE
