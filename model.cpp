@@ -48,9 +48,8 @@ void model_lit_shader(const uint8_t *in, Render3D::VertexOutData *out, const Ren
 
     if(vertex->tex_index)
     {
-        // close enough (should be / 65535)
-        out->u = Fixed16<12>(Fixed32<>::from_raw(vertex->u));
-        out->v = Fixed16<12>(Fixed32<>::from_raw(vertex->v));
+        out->u = Fixed16<12>::from_raw(vertex->u >> 2);
+        out->v = Fixed16<12>::from_raw(vertex->v >> 2);
     }
 }
 

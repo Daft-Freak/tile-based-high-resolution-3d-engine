@@ -115,6 +115,39 @@ def handle_mesh(filename, json_data, json_mesh, matrix):
 
         index_data = get_accessor_data(filename, json_data, index_accessor, False)
 
+        # adjust tex coords
+        # we don't know where the triangles are at this point, so shift the whole thing around
+        tex_min = np.min(tex_coord_data, axis=0)
+        tex_max = np.max(tex_coord_data, axis=0)
+
+        tex_adj = [0, 0]
+
+        # move negative and too-high positive inside if possible
+        if tex_min[0] < 0:
+            tex_adj[0] = np.ceil(-tex_min[0])
+        elif tex_min[0] > 1:
+            tex_adj[0] = -np.floor(tex_min[0])
+
+        if tex_min[1] < 0:
+            tex_adj[1] = np.ceil(-tex_min[1])
+        elif tex_min[1] > 1:
+            tex_adj[1] = -np.floor(tex_min[1])
+
+        tex_min += tex_adj
+        tex_max += tex_adj
+        tex_coord_data += tex_adj
+
+        # clamp if still out of bounds so we don't throw
+        tex_limit = 0xFFFF / 0x4000
+        if tex_max[0] > tex_limit or tex_max[1] > tex_limit:
+            print('texture coords out of bounds for', json_mesh['name'], tex_min, 'to', tex_max, 'max', tex_limit)
+
+            for coord in tex_coord_data:
+                if coord[0] > tex_limit:
+                    coord[0] = tex_limit
+                if coord[1] > tex_limit:
+                    coord[1] = tex_limit
+
         # check if material is textured
         material = None
         tex_id = 0 # no tex
@@ -135,19 +168,11 @@ def handle_mesh(filename, json_data, json_mesh, matrix):
 
             tex_coord = tex_coord_data[i]
 
-            # make tex coords positive
-            if tex_coord[0] < 0.0:
-                tex_coord[0] = 1.0 - (tex_coord[0] % 1)
-            if tex_coord[1] < 0.0:
-                tex_coord[1] = 1.0 - (tex_coord[1] % 1)
-
-            # TODO: wrap >1?
-
             # convert data
             pos = np.floor(pos * (1 << 16)).astype(int)
             nor = np.floor(nor * 0x7FFF).astype(int)
             col = np.floor(colour_data[i] * 0xFF).astype(int)
-            tex_coord = np.floor(tex_coord * 0xFFFF).astype(int)
+            tex_coord = np.floor(tex_coord * 0x4000).astype(int) # 0 - 4
 
             packed_vertex = struct.pack('<3i4B3h2Hxx',
                                         pos[0], pos[1], pos[2], 
