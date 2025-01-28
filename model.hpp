@@ -32,6 +32,9 @@ public:
     ~Model();
 
     void draw(Render3D &r3d);
+    void draw_mesh(uint32_t mesh, Render3D &r3d);
+
+    uint32_t get_num_meshes() const;
 
 private:
     uint32_t num_meshes;

@@ -83,3 +83,17 @@ void Model::draw(Render3D &r3d)
     for(uint32_t i = 0; i < num_meshes; i++)
         r3d.draw(meshes[i].num_vertices, reinterpret_cast<const uint8_t *>(meshes[i].vertices));
 }
+
+void Model::draw_mesh(uint32_t mesh, Render3D &r3d)
+{
+    if(mesh >= num_meshes)
+        return;
+
+    r3d.set_vertex_stride(sizeof(Vertex));
+    r3d.draw(meshes[mesh].num_vertices, reinterpret_cast<const uint8_t *>(meshes[mesh].vertices));
+}
+
+uint32_t Model::get_num_meshes() const
+{
+    return num_meshes;
+}
