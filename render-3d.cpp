@@ -279,7 +279,7 @@ void Render3D::draw(int count, const uint8_t *ptr)
             // w divide and viewport transform
             for(int j = 0; j < 3; j++)
                 transform_vertex(trans[j]);
-            
+
             // cull back faces and empty
             if(cull_triangle(trans))
                 continue;
@@ -1100,10 +1100,9 @@ void blit_fast_code(Render3D::textured_h_line)(uint16_t *col_buf, uint16_t *dept
         auto tex_offset = interp1->pop[2];
 #else
 
-    // TODO: config?
-    constexpr int tex_size_bits_u = 8, tex_size_bits_v = 8;
-    constexpr int tex_width = 1 << tex_size_bits_u;
-    constexpr int tex_height = 1 << tex_size_bits_v;
+    int tex_width = tex->bounds.w;
+    int tex_height = tex->bounds.h;
+    int tex_size_bits_u = __builtin_ctz(tex_width), tex_size_bits_v = __builtin_ctz(tex_height);
 
     for(; col_ptr < end_ptr; col_ptr++, depth_ptr++, z += z_step, r += r_step, g += g_step, b += b_step, u += u_step, v += v_step)
     {

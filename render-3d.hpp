@@ -42,6 +42,7 @@ public:
     const void *get_shader_params() const;
 
     // tex would be const but blit::Surface is missing some consts...
+    // tex bounds must be a power of two, max 256
     void set_texture(blit::Surface *tex, int index = 0);
 
     bool get_fill_triangles() const;
