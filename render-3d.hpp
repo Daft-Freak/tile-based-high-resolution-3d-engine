@@ -82,7 +82,7 @@ protected:
     VertexShaderFunc position_shader = nullptr, vertex_shader = nullptr;
     void *shader_params = nullptr;
 
-    static constexpr int max_textures = 1;
+    static constexpr int max_textures = THR3E_MAX_TEXTURES;
     blit::Surface *textures[max_textures];
 
     bool filled_triangles = true;

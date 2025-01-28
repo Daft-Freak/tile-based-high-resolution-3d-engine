@@ -5,6 +5,10 @@
 #define THR3E_MAX_OUTPUT_VERTICES 1024
 #endif
 
+#ifndef THR3E_MAX_TEXTURES
+#define THR3E_MAX_TEXTURES 1
+#endif
+
 // size of tiles, smaller = less memory, larger = less passes
 // uses width*height*4 bytes for colour+depth tile buffers
 // (* 2 if multicore is enabled)
