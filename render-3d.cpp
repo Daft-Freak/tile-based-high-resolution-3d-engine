@@ -438,19 +438,19 @@ void Render3D::rasterise()
 
     // TODO: config?
     // also duplicated
-    constexpr int tex_size_bits = 8; // can't be > 8
+    constexpr int tex_size_bits_u = 8, tex_size_bits_v = 8; // can't be > 8
 
     // texture mapping
     config = interp_default_config();
     // x
-    interp_config_set_shift(&config, 16 - tex_size_bits); // 16 bit fraction, shift out unneeded low bits
-    interp_config_set_mask(&config, 0, tex_size_bits - 1);
+    interp_config_set_shift(&config, 16 - tex_size_bits_u); // 16 bit fraction, shift out unneeded low bits
+    interp_config_set_mask(&config, 0, tex_size_bits_u - 1);
     interp_config_set_add_raw(&config, true); 
     interp_set_config(interp1, 0, &config);
 
     // y
-    interp_config_set_shift(&config, (16 - tex_size_bits) - tex_size_bits); // similar but less shifted to effectively multiply by width
-    interp_config_set_mask(&config, tex_size_bits, tex_size_bits + tex_size_bits - 1);
+    interp_config_set_shift(&config, (16 - tex_size_bits_v) - tex_size_bits_u); // similar but less shifted to effectively multiply by width
+    interp_config_set_mask(&config, tex_size_bits_u, tex_size_bits_u + tex_size_bits_v - 1);
     interp_set_config(interp1, 1, &config);
 
     // this should result in the texture offset in the full result
@@ -1101,8 +1101,9 @@ void blit_fast_code(Render3D::textured_h_line)(uint16_t *col_buf, uint16_t *dept
 #else
 
     // TODO: config?
-    constexpr int tex_size_bits = 8;
-    constexpr int tex_size = 1 << tex_size_bits;
+    constexpr int tex_size_bits_u = 8, tex_size_bits_v = 8;
+    constexpr int tex_width = 1 << tex_size_bits_u;
+    constexpr int tex_height = 1 << tex_size_bits_v;
 
     for(; col_ptr < end_ptr; col_ptr++, depth_ptr++, z += z_step, r += r_step, g += g_step, b += b_step, u += u_step, v += v_step)
     {
@@ -1114,7 +1115,7 @@ void blit_fast_code(Render3D::textured_h_line)(uint16_t *col_buf, uint16_t *dept
 #if THR3E_PICO_INTERP
         auto tex_col = tex->get_pixel(tex_offset);
 #else
-        auto tex_col = tex->get_pixel({(u.raw() >> (16 - tex_size_bits)) & (tex_size - 1), (v.raw() >> (16 - tex_size_bits)) & (tex_size - 1)});
+        auto tex_col = tex->get_pixel({(u.raw() >> (16 - tex_size_bits_u)) & (tex_width - 1), (v.raw() >> (16 - tex_size_bits_v)) & (tex_height - 1)});
 #endif
 
         Pen col{(uint8_t(r) * tex_col.r) >> 8, (uint8_t(g) * tex_col.g) >> 8, (uint8_t(b) * tex_col.b) >> 8};
